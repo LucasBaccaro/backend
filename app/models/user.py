@@ -12,7 +12,7 @@ class UserBase(BaseModel):
     last_name: str = Field(..., min_length=2, max_length=50)
     dni: str = Field(..., min_length=7, max_length=8)
     phone_number: str = Field(..., min_length=10, max_length=15)
-    role: UserRole
+    role: Optional[UserRole] = None  # Made optional
     location_id: Optional[str] = None
 
 class ClientBase(UserBase):
@@ -35,10 +35,16 @@ class UserCreate(UserBase):
         return self
 
 class ClientCreate(ClientBase, UserCreate):
-    pass
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.role = UserRole.CLIENT  # Set role automatically
 
 class WorkerCreate(WorkerBase, UserCreate):
     location_id: str  # Para workers, location_id es requerido
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        self.role = UserRole.WORKER  # Set role automatically
 
 class UserInDB(UserBase):
     id: str

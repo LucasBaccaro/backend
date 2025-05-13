@@ -385,3 +385,419 @@ El proyecto incluye colecciones Postman para pruebas:
   "ratings_count": 12
 }
 ```
+
+# Services API Documentation
+
+## Base URL
+```
+https://your-render-url.onrender.com
+```
+
+## Authentication
+All endpoints except `/api/v1/auth/register/*` and `/api/v1/auth/login` require a Bearer token in the Authorization header:
+```
+Authorization: Bearer <your_token>
+```
+
+## Common Response Format
+All endpoints return responses in the following format:
+```json
+{
+  "success": true/false,
+  "data": { ... },  // when success is true
+  "error": {        // when success is false
+    "code": "ERROR_CODE",
+    "message": "Error message"
+  }
+}
+```
+
+## Authentication Endpoints
+
+### Register Client
+```http
+POST /api/v1/auth/register/client
+```
+Request:
+```json
+{
+  "email": "client@example.com",
+  "password": "your_password",
+  "first_name": "John",
+  "last_name": "Doe",
+  "dni": "12345678",
+  "phone_number": "+1234567890",
+  "address": "123 Main St",
+  "location_id": "location_uuid"
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "user_uuid",
+    "email": "client@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "dni": "12345678",
+    "phone_number": "+1234567890",
+    "role": "client",
+    "location_id": "location_uuid",
+    "address": "123 Main St",
+    "is_verified": null,
+    "created_at": "2024-03-21T12:00:00Z"
+  }
+}
+```
+
+### Register Worker
+```http
+POST /api/v1/auth/register/worker
+```
+Request:
+```json
+{
+  "email": "worker@example.com",
+  "password": "your_password",
+  "first_name": "Jane",
+  "last_name": "Smith",
+  "dni": "87654321",
+  "phone_number": "+1234567890",
+  "location_id": "location_uuid",
+  "category_id": "category_uuid",
+  "address": "456 Work St"  // Optional
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "user_uuid",
+    "email": "worker@example.com",
+    "first_name": "Jane",
+    "last_name": "Smith",
+    "dni": "87654321",
+    "phone_number": "+1234567890",
+    "role": "worker",
+    "location_id": "location_uuid",
+    "category_id": "category_uuid",
+    "address": "456 Work St",
+    "is_verified": false,
+    "created_at": "2024-03-21T12:00:00Z"
+  }
+}
+```
+
+### Login
+```http
+POST /api/v1/auth/login
+```
+Request:
+```json
+{
+  "email": "user@example.com",
+  "password": "your_password"
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "access_token": "jwt_token",
+    "token_type": "bearer",
+    "user": {
+      "id": "user_uuid",
+      "email": "user@example.com",
+      "first_name": "John",
+      "last_name": "Doe",
+      "phone": "+1234567890",
+      "role": "client/worker",
+      "location_id": "location_uuid",
+      "category_id": "category_uuid", // only for workers
+      "is_verified": true/false/null,
+      "created_at": "2024-03-21T12:00:00Z"
+    }
+  }
+}
+```
+
+## User Endpoints
+
+### Get Current User
+```http
+GET /api/v1/users/me
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "user_uuid",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "phone": "+1234567890",
+    "role": "client/worker",
+    "location_id": "location_uuid",
+    "category_id": "category_uuid", // only for workers
+    "is_verified": true/false/null,
+    "created_at": "2024-03-21T12:00:00Z"
+  }
+}
+```
+
+### Update Current User
+```http
+PUT /api/v1/users/me
+```
+Request:
+```json
+{
+  "first_name": "John",
+  "last_name": "Doe",
+  "phone": "+1234567890"
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "user_uuid",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "phone": "+1234567890",
+    "role": "client/worker",
+    "location_id": "location_uuid",
+    "category_id": "category_uuid", // only for workers
+    "is_verified": true/false/null,
+    "created_at": "2024-03-21T12:00:00Z"
+  }
+}
+```
+
+### List Workers
+```http
+GET /api/v1/users/workers?category_id=uuid&location_id=uuid
+```
+Response:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "user_uuid",
+      "email": "worker@example.com",
+      "first_name": "Jane",
+      "last_name": "Smith",
+      "phone": "+1234567890",
+      "role": "worker",
+      "location_id": "location_uuid",
+      "category_id": "category_uuid",
+      "is_verified": true,
+      "average_rating": 4.5,
+      "ratings_count": 10,
+      "created_at": "2024-03-21T12:00:00Z"
+    }
+  ]
+}
+```
+
+## Service Endpoints
+
+### Create Service Request
+```http
+POST /api/v1/services/request
+```
+Request:
+```json
+{
+  "worker_id": "worker_uuid",
+  "description": "Service description"
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "request_uuid",
+    "client_id": "client_uuid",
+    "worker_id": "worker_uuid",
+    "description": "Service description",
+    "status": "pending",
+    "created_at": "2024-03-21T12:00:00Z"
+  }
+}
+```
+
+### List Service Requests (Worker)
+```http
+GET /api/v1/services/requests
+```
+Response:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "request_uuid",
+      "client_id": "client_uuid",
+      "worker_id": "worker_uuid",
+      "description": "Service description",
+      "status": "pending/accepted/rejected/cancelled/completed",
+      "created_at": "2024-03-21T12:00:00Z"
+    }
+  ]
+}
+```
+
+### Action Service Request
+```http
+POST /api/v1/services/request/{request_id}/action
+```
+Request:
+```json
+{
+  "action": "accept/reject/cancel/complete"
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "request_uuid",
+    "client_id": "client_uuid",
+    "worker_id": "worker_uuid",
+    "description": "Service description",
+    "status": "accepted/rejected/cancelled/completed",
+    "created_at": "2024-03-21T12:00:00Z"
+  }
+}
+```
+
+### Rate Worker
+```http
+POST /api/v1/services/request/{service_request_id}/rate
+```
+Request:
+```json
+{
+  "rating": 5
+}
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "average_rating": 4.5,
+    "ratings_count": 10
+  }
+}
+```
+
+## Reference Endpoints
+
+### Get Locations
+```http
+GET /api/v1/references/locations
+```
+Response:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "location_uuid",
+      "name": "Location Name",
+      "created_at": "2024-03-21T12:00:00Z"
+    }
+  ]
+}
+```
+
+### Get Categories
+```http
+GET /api/v1/references/categories
+```
+Response:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "category_uuid",
+      "name": "Category Name",
+      "created_at": "2024-03-21T12:00:00Z"
+    }
+  ]
+}
+```
+
+### Search Workers
+```http
+GET /api/v1/references/workers/search?category_id=uuid&location_id=uuid
+```
+Response:
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "worker_uuid",
+      "email": "worker@example.com",
+      "first_name": "Jane",
+      "last_name": "Smith",
+      "phone": "+1234567890",
+      "role": "worker",
+      "location_id": "location_uuid",
+      "category_id": "category_uuid",
+      "is_verified": true,
+      "average_rating": 4.5,
+      "ratings_count": 10,
+      "created_at": "2024-03-21T12:00:00Z"
+    }
+  ]
+}
+```
+
+## Health Check
+```http
+GET /health
+```
+Response:
+```json
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "uptime_seconds": 3600,
+    "uptime_formatted": "1:00:00",
+    "version": "1.0.0",
+    "environment": "production"
+  }
+}
+```
+
+## Error Codes
+- `USER_EXISTS`: User with this email already exists
+- `INVALID_CREDENTIALS`: Invalid email or password
+- `WORKER_NOT_VERIFIED`: Worker account is pending verification
+- `UNAUTHORIZED`: User is not authorized to perform this action
+- `NOT_FOUND`: Resource not found
+- `INVALID_LOCATION`: Location not found
+- `INVALID_CATEGORY`: Category not found
+- `INVALID_ACTION`: Invalid action for service request
+- `ALREADY_RATED`: Service already rated
+- `VALIDATION_ERROR`: Request validation failed
+- `FETCH_ERROR`: Error fetching data
+- `UPDATE_ERROR`: Error updating data
+- `CREATE_ERROR`: Error creating data
+- `ACTION_ERROR`: Error performing action
+- `RATING_ERROR`: Error processing rating
