@@ -1,0 +1,387 @@
+# Services API
+
+API backend para una plataforma de servicios entre trabajadores y clientes, construida con FastAPI y Supabase.
+
+## Características Principales
+
+- Autenticación de usuarios (clientes y trabajadores)
+- Verificación manual de trabajadores
+- Gestión de ubicaciones y categorías
+- API RESTful con respuestas estandarizadas
+- Documentación automática con Swagger/ReDoc
+- Manejo de errores consistente
+- Validación de datos con Pydantic
+
+## Requisitos
+
+- Python 3.8+
+- Supabase (base de datos y autenticación)
+- Variables de entorno configuradas
+
+## Configuración
+
+1. Clonar el repositorio:
+   ```bash
+   git clone <repository-url>
+   cd <repository-name>
+   ```
+
+2. Crear y activar entorno virtual:
+   ```bash
+   python -m venv .venv
+   # Windows
+   .venv\Scripts\activate
+   # Unix/MacOS
+   source .venv/bin/activate
+   ```
+
+3. Instalar dependencias:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Configurar variables de entorno:
+   Crear un archivo `.env` en la raíz del proyecto con:
+   ```env
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_KEY=your_supabase_anon_key
+   SUPABASE_SERVICE_KEY=your_supabase_service_key
+   SECRET_KEY=your_jwt_secret_key
+   ALGORITHM=HS256
+   ACCESS_TOKEN_EXPIRE_MINUTES=1440
+   ```
+
+## Ejecución
+
+Para iniciar el servidor de desarrollo:
+```bash
+uvicorn main:app --reload
+```
+
+La API estará disponible en `http://localhost:8000`
+
+## Documentación API
+
+- Swagger UI: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+## Endpoints
+
+### Autenticación (`/api/v1/auth`)
+
+#### Registro de Cliente
+- `POST /register/client`
+- Body:
+  ```json
+  {
+    "email": "string",
+    "password": "string",
+    "first_name": "string",
+    "last_name": "string",
+    "dni": "string",
+    "phone_number": "string",
+    "address": "string",
+    "location_id": "string"
+  }
+  ```
+
+#### Registro de Trabajador
+- `POST /register/worker`
+- Body:
+  ```json
+  {
+    "email": "string",
+    "password": "string",
+    "first_name": "string",
+    "last_name": "string",
+    "dni": "string",
+    "phone_number": "string",
+    "location_id": "string",
+    "category_id": "string",
+    "address": "string (opcional)"
+  }
+  ```
+
+#### Login
+- `POST /token`
+- Body (form-urlencoded):
+  ```
+  grant_type=password
+  username=email
+  password=password
+  ```
+
+#### Perfil de Usuario
+- `GET /me`
+- Requiere token de autenticación
+
+### Referencias (`/api/v1/references`)
+
+#### Categorías
+- `GET /categories`
+- Retorna lista de categorías disponibles
+
+#### Ubicaciones
+- `GET /locations`
+- Retorna lista de ubicaciones disponibles
+
+#### Búsqueda de Trabajadores
+- `GET /workers/search`
+- Query Parameters:
+  - `category_id`: ID de la categoría
+  - `location_id`: ID de la ubicación
+- Requiere autenticación (solo clientes)
+- Retorna lista de trabajadores verificados que:
+  - Pertenezcan a la categoría especificada
+  - Estén en la ubicación especificada
+  - Estén verificados (`is_verified = true`)
+- Ejemplo de respuesta:
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "worker_id",
+        "email": "worker@example.com",
+        "first_name": "Juan",
+        "last_name": "Pérez",
+        "dni": "12345678",
+        "phone_number": "+5491122334455",
+        "role": "worker",
+        "location_id": "loc_001",
+        "category_id": "cat_001",
+        "is_verified": true,
+        "address": "Calle 123"
+      }
+    ],
+    "error": null
+  }
+  ```
+
+## Endpoints de Servicios
+
+### Crear solicitud de servicio (cliente)
+- `POST /api/v1/services/request`
+- Headers: `Authorization: Bearer <token del cliente>`
+- Body:
+  ```json
+  {
+    "worker_id": "uuid-del-worker",
+    "description": "Detalle del trabajo a realizar"
+  }
+  ```
+- Respuesta: objeto ServiceRequestResponse
+
+### Listar solicitudes de servicio (worker)
+- `GET /api/v1/services/requests`
+- Headers: `Authorization: Bearer <token del worker>`
+- Respuesta: lista de ServiceRequestResponse
+
+### Acción sobre solicitud (worker)
+- `POST /api/v1/services/request/{request_id}/action`
+- Headers: `Authorization: Bearer <token del worker>`
+- Body:
+  ```json
+  { "action": "accepted" } // o "rejected", "cancelled"
+  ```
+- Respuesta: objeto ServiceRequestResponse actualizado
+
+## Modelos de Datos
+
+### Usuario
+```python
+class UserBase:
+    email: EmailStr
+    first_name: str
+    last_name: str
+    dni: str
+    phone_number: str
+    role: UserRole
+    location_id: Optional[str]
+
+class UserInDB(UserBase):
+    id: str
+    is_active: bool
+    is_verified: Optional[bool]
+    category_id: Optional[str]
+    address: Optional[str]
+    average_rating: float  # Promedio de calificaciones recibidas (solo workers)
+    ratings_count: int    # Cantidad de calificaciones recibidas (solo workers)
+```
+
+### Cliente
+```python
+class ClientBase(UserBase):
+    address: str  # Requerido
+```
+
+### Trabajador
+```python
+class WorkerBase(UserBase):
+    address: Optional[str]
+    category_id: str
+    is_verified: bool  # Requiere verificación manual
+```
+
+### Respuesta API
+```python
+class APIResponse:
+    success: bool
+    data: Optional[T]
+    error: Optional[ErrorDetail]
+```
+
+### Modelo de ServiceRequest
+```python
+class ServiceRequestBase(BaseModel):
+    worker_id: str
+    description: str
+
+class ServiceRequestCreate(ServiceRequestBase):
+    pass
+
+class ServiceRequestInDB(ServiceRequestBase):
+    id: str
+    client_id: str
+    status: ServiceRequestStatus
+    created_at: datetime
+    updated_at: datetime
+
+class ServiceRequestResponse(ServiceRequestInDB):
+    class Config:
+        from_attributes = True
+
+class ServiceRequestStatus(str, Enum):
+    pending = "pending"
+    accepted = "accepted"
+    rejected = "rejected"
+    cancelled = "cancelled"
+    completed = "completed"
+```
+
+## Flujo de Autenticación
+
+1. **Registro de Cliente**:
+   - Email auto-confirmado
+   - No requiere verificación manual
+   - Debe proporcionar dirección y ubicación
+
+2. **Registro de Trabajador**:
+   - Email auto-confirmado
+   - Requiere verificación manual (`is_verified`)
+   - Debe seleccionar categoría y ubicación
+   - Dirección opcional
+
+3. **Login**:
+   - Usa OAuth2 con password grant
+   - Trabajadores no verificados no pueden iniciar sesión
+   - Retorna JWT token para autenticación
+
+## Manejo de Errores
+
+La API utiliza un formato de respuesta consistente para errores:
+```json
+{
+    "success": false,
+    "data": null,
+    "error": {
+        "code": "ERROR_CODE",
+        "message": "Descripción del error",
+        "details": null
+    }
+}
+```
+
+Códigos de error comunes:
+- `VALIDATION_ERROR`: Error en validación de datos
+- `USER_EXISTS`: Email ya registrado
+- `INVALID_CREDENTIALS`: Credenciales incorrectas
+- `WORKER_NOT_VERIFIED`: Trabajador pendiente de verificación
+- `INVALID_LOCATION`: Ubicación no válida
+- `INVALID_REFERENCE`: Referencia (categoría/ubicación) no válida
+
+## Colecciones Postman
+
+El proyecto incluye colecciones Postman para pruebas:
+- `postman/clients-api.json`: Endpoints para clientes
+- `postman/workers-api.json`: Endpoints para trabajadores
+
+## Desarrollo
+
+### Estructura del Proyecto
+```
+.
+├── app/
+│   ├── api/
+│   │   └── v1/
+│   │       ├── auth.py
+│   │       └── references.py
+│   │   
+│   ├── core/
+│   │   ├── auth.py
+│   │   ├── config.py
+│   │   └── supabase.py
+│   │   
+│   ├── middleware/
+│   │   └── error_handler.py
+│   │   
+│   └── models/
+│   │   ├── user.py
+│   │   ├── category.py
+│   │   └── location.py
+│   │   
+│   ├── postman/
+│   │   ├── clients-api.json
+│   │   └── workers-api.json
+│   │   
+│   └── main.py
+│   
+├── requirements.txt
+└── README.md 
+```
+
+### Próximos Pasos
+- Implementar endpoints para gestión de servicios
+- Añadir sistema de calificaciones
+- Implementar búsqueda de trabajadores
+- Añadir sistema de notificaciones
+- Implementar gestión de pagos 
+
+## Chat en Servicios (WebSocket)
+
+- El chat entre cliente y worker solo está habilitado cuando el service request está en estado `accepted`.
+- Los mensajes se almacenan en la tabla `service_messages` con los campos: `service_request_id`, `sender_id`, `message`, `created_at`.
+- Al conectarse al WebSocket, el usuario recibe solo el historial de mensajes de ese servicio.
+- Si el status del servicio cambia a otro distinto de `accepted`, el chat se cierra automáticamente.
+
+### Endpoint WebSocket
+- URL: `ws://localhost:8080/ws/services/{service_request_id}/chat?token={JWT}`
+- Solo pueden conectarse el cliente y el worker del servicio.
+- El historial se envía al conectar, y los mensajes nuevos se transmiten en tiempo real.
+
+### Probar el chat
+1. Levanta el backend en el puerto 8080.
+2. Sirve el archivo `service_chat_test.html` desde un servidor estático (por ejemplo, `python -m http.server 8081`).
+3. Abre el HTML en el navegador y completa:
+   - Service Request ID (debe estar en estado `accepted`)
+   - JWT Token (del cliente o worker)
+4. Haz clic en "Conectar" y prueba enviar/recibir mensajes.
+
+## Sistema de Calificaciones
+
+- Solo los clientes pueden calificar a los workers, una vez por servicio completado.
+- El endpoint es: `POST /api/v1/services/request/{service_request_id}/rate` con body `{ "rating": 1-5 }`.
+- Cada vez que un worker recibe una calificación, se actualizan automáticamente los campos `average_rating` y `ratings_count` en la tabla `users`.
+- Cuando se consulta un worker (en búsquedas o perfil), estos campos ya vienen incluidos en la respuesta.
+- No se permiten comentarios, solo puntaje.
+
+**Ejemplo de respuesta de worker:**
+```json
+{
+  "id": "...",
+  "email": "worker@example.com",
+  ...
+  "average_rating": 4.5,
+  "ratings_count": 12
+}
+```

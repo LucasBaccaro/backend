@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Test Chat Servicio (WebSocket)</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2em; }
+    #chat { border: 1px solid #ccc; padding: 1em; height: 300px; overflow-y: auto; margin-bottom: 1em; }
+    #status { color: green; }
+    #error { color: red; }
+    input, button { margin: 0.2em; }
+  </style>
+</head>
+<body>
+  <h2>Test Chat Servicio (WebSocket)</h2>
+  <div>
+    <label>Service Request ID: <input id="serviceId" type="text" size="40"></label><br>
+    <label>JWT Token: <input id="token" type="text" size="60"></label><br>
+    <button onclick="connectWS()">Conectar</button>
+    <span id="status"></span>
+    <span id="error"></span>
+  </div>
+  <div id="chat"></div>
+  <div>
+    <input id="msg" type="text" size="60" placeholder="Escribe un mensaje..." disabled>
+    <button onclick="sendMsg()" id="sendBtn" disabled>Enviar</button>
+  </div>
+  <script>
+    let ws;
+    function connectWS() {
+      const serviceId = document.getElementById('serviceId').value.trim();
+      const token = document.getElementById('token').value.trim();
+      if (!serviceId || !token) {
+        document.getElementById('error').textContent = 'Completa ambos campos.';
+        return;
+      }
+      document.getElementById('error').textContent = '';
+      document.getElementById('status').textContent = 'Conectando...';
+      ws = new WebSocket(`ws://localhost:8080/ws/services/${serviceId}/chat?token=${token}`);
+      ws.onopen = () => {
+        document.getElementById('status').textContent = 'Conectado';
+        document.getElementById('msg').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+      };
+      ws.onmessage = (event) => {
+        const chat = document.getElementById('chat');
+        let data;
+        try { data = JSON.parse(event.data); } catch { data = event.data; }
+        if (data.history) {
+          chat.innerHTML = '';
+          data.history.forEach(m => {
+            chat.innerHTML += `<div><b>${m.sender_id}:</b> ${m.message}</div>`;
+          });
+        } else if (data.error) {
+          chat.innerHTML += `<div style='color:red'><b>ERROR:</b> ${data.error}</div>`;
+        } else if (data.sender_id && data.message) {
+          chat.innerHTML += `<div><b>${data.sender_id}:</b> ${data.message}</div>`;
+        } else {
+          chat.innerHTML += `<div>${event.data}</div>`;
+        }
+        chat.scrollTop = chat.scrollHeight;
+      };
+      ws.onclose = () => {
+        document.getElementById('status').textContent = 'Desconectado';
+        document.getElementById('msg').disabled = true;
+        document.getElementById('sendBtn').disabled = true;
+      };
+      ws.onerror = (e) => {
+        document.getElementById('error').textContent = 'Error de conexión.';
+      };
+    }
+    function sendMsg() {
+      const msg = document.getElementById('msg').value;
+      if (ws && msg) {
+        ws.send(msg);
+        document.getElementById('msg').value = '';
+      }
+    }
+    document.getElementById('msg').addEventListener('keyup', function(e) {
+      if (e.key === 'Enter') sendMsg();
+    });
+  </script>
+</body>
+</html> 

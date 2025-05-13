@@ -1,0 +1,150 @@
+{
+  "info": {
+    "name": "Workers API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Register Worker",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/register/worker",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "register", "worker"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"worker@example.com\",\n    \"password\": \"SecurePass123!\",\n    \"first_name\": \"Juan\",\n    \"last_name\": \"Pérez\",\n    \"dni\": \"87654321\",\n    \"phone_number\": \"+5491122334455\",\n    \"role\": \"worker\",\n    \"location_id\": \"loc_001\",\n    \"category_id\": \"cat_001\",\n    \"address\": null\n}"
+        }
+      }
+    },
+    {
+      "name": "Login Worker",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/x-www-form-urlencoded"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/token",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "token"]
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "grant_type",
+              "value": "password",
+              "type": "text"
+            },
+            {
+              "key": "username",
+              "value": "worker@example.com",
+              "type": "text"
+            },
+            {
+              "key": "password",
+              "value": "SecurePass123!",
+              "type": "text"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get Worker Profile",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{worker_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/me",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "auth", "me"]
+        }
+      }
+    },
+    {
+      "name": "Get Categories",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/v1/references/categories",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "references", "categories"]
+        }
+      }
+    },
+    {
+      "name": "Get Locations",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/v1/references/locations",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "references", "locations"]
+        }
+      }
+    },
+    {
+      "name": "Get Service Requests",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{worker_token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/services/requests",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "services", "requests"]
+        },
+        "description": "El worker ve sus requests de servicio."
+      }
+    },
+    {
+      "name": "Action Service Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{worker_token}}" }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/v1/services/request/:request_id/action",
+          "host": ["{{base_url}}"],
+          "path": ["api", "v1", "services", "request", ":request_id", "action"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"accept\"\n}"
+        },
+        "description": "El worker acepta, rechaza o cancela un request. Cambia :request_id por el id real y action por accept, reject o cancel."
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "worker_token",
+      "value": "your_jwt_token_here"
+    }
+  ]
+}
