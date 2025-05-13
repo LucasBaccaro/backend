@@ -5,6 +5,8 @@ from app.api.v1 import auth, references, services, ws_chat
 from app.core.config import get_settings
 from app.middleware.error_handler import validation_exception_handler, http_exception_handler
 from app.schemas.response import APIResponse
+from datetime import datetime
+import time
 
 settings = get_settings()
 
@@ -27,6 +29,9 @@ app.add_middleware(
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(HTTPException, http_exception_handler)
 
+# Store startup time
+startup_time = time.time()
+
 # Include routers
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["auth"])
 app.include_router(references.router, prefix="/api/v1/references", tags=["references"])
@@ -42,9 +47,19 @@ async def root():
 
 @app.get("/health")
 async def health_check():
+    """Health check endpoint that returns uptime and version information"""
+    uptime_seconds = time.time() - startup_time
+    uptime_formatted = str(datetime.timedelta(seconds=int(uptime_seconds)))
+    
     return APIResponse(
         success=True,
-        data={"status": "healthy"}
+        data={
+            "status": "healthy",
+            "uptime_seconds": uptime_seconds,
+            "uptime_formatted": uptime_formatted,
+            "version": settings.VERSION,
+            "environment": settings.ENVIRONMENT
+        }
     )
 
 if __name__ == "__main__":

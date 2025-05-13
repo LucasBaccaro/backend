@@ -68,74 +68,56 @@ async def get_categories():
 
 @router.get("/workers/search", response_model=APIResponse[List[UserResponse]])
 async def search_workers(
-    category_id: str = Query(..., description="ID de la categoría"),
-    location_id: str = Query(..., description="ID de la ubicación"),
+    category_id: str = Query(..., description="Category ID"),
+    location_id: str = Query(..., description="Location ID"),
     current_user: UserResponse = Depends(get_current_user)
 ):
     """
-    Busca trabajadores disponibles por categoría y ubicación.
-    Solo retorna trabajadores verificados que coincidan con la categoría y ubicación especificadas.
+    Search for available workers by category and location.
+    Only returns verified workers that match the specified category and location.
     """
     try:
-        # Verificar que el usuario actual es un cliente
+        # Verify current user is a client
         if current_user.role != "client":
             return APIResponse(
                 success=False,
                 error=ErrorDetail(
                     code="UNAUTHORIZED",
-                    message="Solo los clientes pueden buscar trabajadores"
+                    message="Only clients can search for workers"
                 )
             )
         
         supabase = get_supabase_client()
         
-        # Verificar que la categoría existe
+        # Verify category exists
         category = supabase.table("categories").select("id").eq("id", category_id).execute()
         if not category.data:
             return APIResponse(
                 success=False,
                 error=ErrorDetail(
                     code="INVALID_CATEGORY",
-                    message="Categoría no encontrada"
+                    message="Category not found"
                 )
             )
         
-        # Verificar que la ubicación existe
+        # Verify location exists
         location = supabase.table("locations").select("id").eq("id", location_id).execute()
         if not location.data:
             return APIResponse(
                 success=False,
                 error=ErrorDetail(
                     code="INVALID_LOCATION",
-                    message="Ubicación no encontrada"
+                    message="Location not found"
                 )
             )
         
-        # Primero, veamos cuántos trabajadores hay en total
-        all_workers = supabase.table("users").select("*").eq("role", "worker").execute()
-        print(f"Total de trabajadores: {len(all_workers.data)}")
-        
-        # Luego, veamos cuántos hay por cada criterio
-        workers_by_category = supabase.table("users").select("*").eq("role", "worker").eq("category_id", category_id).execute()
-        print(f"Trabajadores en categoría {category_id}: {len(workers_by_category.data)}")
-        
-        workers_by_location = supabase.table("users").select("*").eq("role", "worker").eq("location_id", location_id).execute()
-        print(f"Trabajadores en ubicación {location_id}: {len(workers_by_location.data)}")
-        
-        workers_verified = supabase.table("users").select("*").eq("role", "worker").eq("is_verified", True).execute()
-        print(f"Trabajadores verificados: {len(workers_verified.data)}")
-        
-        # Buscar trabajadores que coincidan con los criterios
+        # Search for workers matching criteria
         workers = supabase.table("users").select("*").eq("role", "worker").eq("category_id", category_id).eq("location_id", location_id).eq("is_verified", True).execute()
-        print(f"Trabajadores que cumplen todos los criterios: {len(workers.data)}")
-        
-        if workers.data:
-            print("Ejemplo de trabajador encontrado:", workers.data[0])
         
         if not workers.data:
             return APIResponse(
                 success=True,
-                data=[]  # Retornar lista vacía en lugar de error
+                data=[]  # Return empty list instead of error
             )
         
         return APIResponse(
@@ -144,7 +126,6 @@ async def search_workers(
         )
         
     except Exception as e:
-        print(f"Error en búsqueda de trabajadores: {str(e)}")
         return APIResponse(
             success=False,
             error=ErrorDetail(

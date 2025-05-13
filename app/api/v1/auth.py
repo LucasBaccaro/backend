@@ -19,23 +19,31 @@ class LoginRequest(BaseModel):
     password: str
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserResponse:
-    payload = verify_token(token)
-    if not payload:
+    try:
+        payload = verify_token(token)
+        if not payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+            )
+        
+        supabase = get_supabase_client()
+        user = supabase.table("users").select("*").eq("id", payload["sub"]).execute()
+        
+        if not user.data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+            )
+        
+        return UserResponse(**user.data[0])
+    except HTTPException as e:
+        raise e
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
         )
-    
-    supabase = get_supabase_client()
-    user = supabase.table("users").select("*").eq("id", payload["sub"]).execute()
-    
-    if not user.data:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-        )
-    
-    return UserResponse(**user.data[0])
 
 @router.post("/register/client", response_model=APIResponse[UserResponse])
 async def register_client(user_data: ClientCreate):
